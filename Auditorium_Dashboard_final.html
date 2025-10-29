@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auditorium Dashboard - Final</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{ --navy:#0b2940; --panel:#e2f3fb; --card:#cfe9fb; --accent:#3aa0ff; --muted:#6b93a6; }
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter, system-ui, Arial;background:#dff3fb;color:#07203a}
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--navy);color:#e6f7ff;padding:28px 18px}
+.logo{font-weight:700;font-size:20px;margin-bottom:14px}
+.subtitle{font-size:12px;color:rgba(255,255,255,0.85);margin-bottom:18px}
+.side-btn{display:block;width:100%;text-align:left;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);color:#dff6ff;background:transparent;margin:8px 0;cursor:pointer}
+.side-btn.active{background:rgba(255,255,255,0.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02);border-left:4px solid var(--accent);padding-left:10px}
+.small-info{font-size:12px;color:#9fc0d6;margin-top:14px}
+.content{flex:1;padding:22px 28px;overflow:auto}
+.top-cards{display:flex;gap:18px;margin-bottom:18px}
+.card{background:var(--card);padding:14px;border-radius:10px;min-width:160px}
+.card .label{font-size:13px;color:#0b2940;opacity:0.7}
+.card .value{font-weight:700;font-size:20px;margin-top:6px;color:#07203a}
+.layout{display:grid;grid-template-columns:1fr 360px;gap:18px}
+.panel{background:var(--panel);padding:16px;border-radius:10px;min-height:140px}
+.chart-wrap{height:320px;padding:6px}
+.table-wrapper{background:var(--panel);padding:12px;border-radius:8px;margin-top:12px}
+input[type="text"], input[type="number"]{padding:8px;border-radius:6px;border:1px solid #cfe4ee}
+.table{width:100%;border-collapse:collapse}
+.table th{background:transparent;text-align:left;padding:10px;color:#07203a;border-bottom:1px solid rgba(0,0,0,0.06)}
+.table td{padding:10px;border-top:1px solid rgba(0,0,0,0.04);font-size:14px}
+.controls{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.note{font-size:13px;color:#24516b}
+@media(max-width:900px){ .layout{grid-template-columns:1fr} .sidebar{display:none} body{padding-top:10px} }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">Auditorium</div>
+    <div class="subtitle">Programs Dashboard</div>
+    <button class="side-btn active" id="btn-overview">Overview</button>
+    <button class="side-btn" id="btn-monthly">Monthly</button>
+    <button class="side-btn" id="btn-table">Table</button>
+    <div class="small-info">Data loaded from your uploaded CSV • encoding: latin1</div>
+  </aside>
+  <main class="content">
+    <!-- Sections -->
+    <section id="overview" class="page-section">
+      <div class="top-cards">
+        <div class="card"><div class="label">Total Programs</div><div id="totalPrograms" class="value">—</div></div>
+        <div class="card"><div class="label">Year / Hijri</div><div id="yearHijri" class="value">—</div></div>
+        <div class="card"><div class="label">Total Hours</div><div id="totalHours" class="value">—</div></div>
+      </div>
+      <div class="layout">
+        <div>
+          <div class="panel">
+            <div style="font-weight:600;margin-bottom:8px">Duration in hours by Type</div>
+            <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+          </div>
+          <div class="table-wrapper">
+            <div style="font-weight:600;margin-bottom:8px">Data Table</div>
+            <div class="controls">
+              <input id="search" type="text" placeholder="Search description or type" style="flex:1">
+              <label class="note">Show rows <input id="rowsPerPage" type="number" value="20" style="width:70px;margin-left:6px"></label>
+            </div>
+            <div style="max-height:420px;overflow:auto">
+              <table class="table" id="dataTable"><thead><tr><th>Description</th><th>Type</th><th>Hijri Date</th><th>Duration (hrs)</th></tr></thead><tbody></tbody></table>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div style="font-weight:600;margin-bottom:8px">Total Hours By Month</div>
+            <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+          </div>
+          <div class="panel" style="margin-top:14px">
+            <div style="font-weight:600;margin-bottom:8px">Quick info</div>
+            <div class="note">This dashboard was generated from your uploaded CSV file. Use the table search to filter results. Host on GitHub Pages by uploading this HTML file.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="monthly" class="page-section" style="display:none">
+      <div class="panel">
+        <div style="font-weight:600;margin-bottom:8px">Monthly View — Total Hours</div>
+        <div class="chart-wrap"><canvas id="monthlyBigChart"></canvas></div>
+      </div>
+    </section>
+
+    <section id="table" class="page-section" style="display:none">
+      <div class="panel">
+        <div style="font-weight:600;margin-bottom:8px">Full Data Table</div>
+        <div class="controls" style="margin-top:8px">
+          <input id="search2" type="text" placeholder="Search description or type" style="flex:1">
+          <label class="note">Show rows <input id="rowsPerPage2" type="number" value="50" style="width:70px;margin-left:6px"></label>
+        </div>
+        <div style="max-height:600px;overflow:auto">
+          <table class="table" id="fullTable"><thead><tr><th>Sr No</th><th>Date</th><th>Hijri Date</th><th>Description</th><th>Type</th><th>Time to</th><th>Time From</th><th>Duration in hours</th><th>Total Hours</th><th>_duration_hours</th></tr></thead><tbody></tbody></table></div></div></section>
+
+<script>
+const ITEMS = [{"Sr No": "1", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Kalemaat Nooraniyah regarding Al Jamea tus Saifiyah", "Type": "Awwala Orientation", "Time to": "8:10 AM", "Time From": "8:25 AM", "Duration in hours": "0:15", "Total Hours": "146:40:00", "_duration_hours": 0.004166666666666667}, {"Sr No": "2", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Inaugural session of the Orientation program", "Type": "Awwala Orientation", "Time to": "8:35 AM", "Time From": "8:50 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "3", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Nasheed Tilawat", "Type": "Awwala Orientation", "Time to": "8:50 AM", "Time From": "8:55 AM", "Duration in hours": "0:05:00", "Total Hours": "", "_duration_hours": 0.08333333333333333}, {"Sr No": "4", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Theme of the day  Every Mumins home is Al Jamea", "Type": "Awwala Orientation", "Time to": "8:55 AM", "Time From": "9:45 AM", "Duration in hours": "0:50:00", "Total Hours": "", "_duration_hours": 0.8333333333333334}, {"Sr No": "5", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Drawing wisdom from the experiences of Asateza Kiram and mumeneen mukhleseen", "Type": "Awwala Orientation", "Time to": "9:45 AM", "Time From": "10:00 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "6", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Understanding Behavioural Patterns", "Type": "Awwala Orientation", "Time to": "10:30 AM", "Time From": "11:30 AM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "7", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Orientation of Mahad al Zahra", "Type": "Awwala Orientation", "Time to": "11:40 AM", "Time From": "12:30 PM", "Duration in hours": "0:50:00", "Total Hours": "", "_duration_hours": 0.8333333333333334}, {"Sr No": "8", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Skit / Enactment", "Type": "Awwala Orientation", "Time to": "2:00 PM", "Time From": "2:20 PM", "Duration in hours": "0:20:00", "Total Hours": "", "_duration_hours": 0.3333333333333333}, {"Sr No": "9", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Parenting from Afar - Session", "Type": "Awwala Orientation", "Time to": "2:20 PM", "Time From": "3:30 PM", "Duration in hours": "1:10:00", "Total Hours": "", "_duration_hours": 1.1666666666666667}, {"Sr No": "10", "Date": "4/8/2025", "Hijri Date": "10-Shawwal-1446", "Description": "Aljamea tus Saifiyahs Historical film (part one)", "Type": "Awwala Orientation", "Time to": "3:30 PM", "Time From": "4:00 PM", "Duration in hours": "0:30:00", "Total Hours": "", "_duration_hours": 0.5}, {"Sr No": "11", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Shukur Kitab Busaheba", "Type": "Awwala Orientation", "Time to": "8:15 AM", "Time From": "8:45 AM", "Duration in hours": "0:30:00", "Total Hours": "", "_duration_hours": 0.5}, {"Sr No": "12", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Kalemaat Nooraniyah regarding Al Jamea tus Saifiyah", "Type": "Awwala Orientation", "Time to": "8:45 AM", "Time From": "8:55 AM", "Duration in hours": "0:10:00", "Total Hours": "", "_duration_hours": 0.16666666666666666}, {"Sr No": "13", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Theme of the day  Jamea is my home", "Type": "Awwala Orientation", "Time to": "8:55 AM", "Time From": "9:00 AM", "Duration in hours": "0:05:00", "Total Hours": "", "_duration_hours": 0.08333333333333333}, {"Sr No": "14", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Gaining insights from the experiences of parents of first year students from last year", "Type": "Awwala Orientation", "Time to": "9:05 AM", "Time From": "9:25 AM", "Duration in hours": "0:20:00", "Total Hours": "", "_duration_hours": 0.3333333333333333}, {"Sr No": "15", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Introduction of the academic system and various departments and JHS Portal", "Type": "Awwala Orientation", "Time to": "9:25 AM", "Time From": "9:45 AM", "Duration in hours": "0:20:00", "Total Hours": "", "_duration_hours": 0.3333333333333333}, {"Sr No": "16", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "JHS Skit", "Type": "Awwala Orientation", "Time to": "9:45 AM", "Time From": "9:50 AM", "Duration in hours": "0:05:00", "Total Hours": "", "_duration_hours": 0.08333333333333333}, {"Sr No": "17", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Introduction of Marhala Saqafat Aamma", "Type": "Awwala Orientation", "Time to": "9:50 AM", "Time From": "10:00 AM", "Duration in hours": "0:10:00", "Total Hours": "", "_duration_hours": 0.16666666666666666}, {"Sr No": "18", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Developing reading & writing skills", "Type": "Awwala Orientation", "Time to": "10:30 AM", "Time From": "11:30 AM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "19", "Date": "4/9/2025", "Hijri Date": "11-Shawwal-1446", "Description": "Orientation of Jameas Library", "Type": "Awwala Orientation", "Time to": "3:30 PM", "Time From": "4:30 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "20", "Date": "4/10/2025", "Hijri Date": "12-Shawwal-1446", "Description": "Theme of the day- This is our army of future", "Type": "Awwala Orientation", "Time to": "8:15 AM", "Time From": "8:30 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "21", "Date": "4/10/2025", "Hijri Date": "12-Shawwal-1446", "Description": "Drawing wisdom from the experiences of Asateza kiram and mumeneen mukhleseen", "Type": "Awwala Orientation", "Time to": "8:30 AM", "Time From": "9:00 AM", "Duration in hours": "0:30:00", "Total Hours": "", "_duration_hours": 0.5}, {"Sr No": "22", "Date": "4/10/2025", "Hijri Date": "12-Shawwal-1446", "Description": "A summary of the administrative system and organizational matters", "Type": "Awwala Orientation", "Time to": "9:00 AM", "Time From": "9:20 AM", "Duration in hours": "0:20:00", "Total Hours": "", "_duration_hours": 0.3333333333333333}, {"Sr No": "23", "Date": "4/10/2025", "Hijri Date": "12-Shawwal-1446", "Description": "Al Jamea tus Saifiyahs Historical film (part two)", "Type": "Awwala Orientation", "Time to": "9:20 AM", "Time From": "10:00 AM", "Duration in hours": "0:40:00", "Total Hours": "", "_duration_hours": 0.6666666666666666}, {"Sr No": "24", "Date": "4/10/2025", "Hijri Date": "12-Shawwal-1446", "Description": "Supporting Mental Health & Well-being", "Type": "Awwala Orientation", "Time to": "10:30 AM", "Time From": "11:30 AM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "25", "Date": "4/10/2025", "Hijri Date": "12-Shawwal-1446", "Description": "Developing skills of Composition", "Type": "Awwala Orientation", "Time to": "4:10 PM", "Time From": "5:00 PM", "Duration in hours": "0:50:00", "Total Hours": "", "_duration_hours": 0.8333333333333334}, {"Sr No": "26", "Date": "4/10/2025", "Hijri Date": "12-Shawwal-1446", "Description": "Developing skills of Composition", "Type": "Awwala Orientation", "Time to": "5:55 PM", "Time From": "6:40 PM", "Duration in hours": "0:45:00", "Total Hours": "", "_duration_hours": 0.75}, {"Sr No": "27", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "Kalemaat Nooraniyah regarding Al Jamea tus Saifiyah", "Type": "Awwala Orientation", "Time to": "8:45 AM", "Time From": "9:00 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "28", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "Theme of the day - A Mumins son enrols in Jamea for four reasons: language, attire, appearance & deeds", "Type": "Awwala Orientation", "Time to": "9:00 AM", "Time From": "9:10 AM", "Duration in hours": "0:10:00", "Total Hours": "", "_duration_hours": 0.16666666666666666}, {"Sr No": "29", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "Distinguishing feature of Tadeeb and Riyadat in the academic life of a student", "Type": "Awwala Orientation", "Time to": "9:10 AM", "Time From": "9:30 AM", "Duration in hours": "0:20:00", "Total Hours": "", "_duration_hours": 0.3333333333333333}, {"Sr No": "30", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "Gaining insights from the experiences of senior khidmatguzar", "Type": "Awwala Orientation", "Time to": "9:30 AM", "Time From": "9:45 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "31", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "Overview of external examinations & learning of English language along with exact sciences", "Type": "Awwala Orientation", "Time to": "9:45 AM", "Time From": "10:00 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "32", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "Developing Listening & Speaking skills", "Type": "Awwala Orientation", "Time to": "10:30 AM", "Time From": "11:30 AM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "33", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "?????? ?????? ????? ?????? ???????? ????? ?????? ????? ??????", "Type": "Awwala Orientation", "Time to": "3:30 PM", "Time From": "5:30 PM", "Duration in hours": "2:00:00", "Total Hours": "", "_duration_hours": 2.0}, {"Sr No": "34", "Date": "4/11/2025", "Hijri Date": "13-Shawwal-1446", "Description": "Khaimat al Riyazat", "Type": "Awwala Orientation", "Time to": "5:30 PM", "Time From": "6:00 PM", "Duration in hours": "0:30:00", "Total Hours": "", "_duration_hours": 0.5}, {"Sr No": "35", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "Kalemaat Nooraniyah regarding Al Jamea tus Saifiyah", "Type": "Awwala Orientation", "Time to": "8:10 AM", "Time From": "8:25 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "36", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "Drawing wisdom from the experiences of Asateza Kiram and mumeneen mukhleseen", "Type": "Awwala Orientation", "Time to": "8:35 AM", "Time From": "8:45 AM", "Duration in hours": "0:10:00", "Total Hours": "", "_duration_hours": 0.16666666666666666}, {"Sr No": "37", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "Elevation of mumineens standard due to the barakat of Jamea", "Type": "Awwala Orientation", "Time to": "8:45 AM", "Time From": "9:00 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "38", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "Documentry  The Golden Message TGM", "Type": "Awwala Orientation", "Time to": "9:00 AM", "Time From": "10:00 AM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "39", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "Growth mindset", "Type": "Awwala Orientation", "Time to": "10:30 AM", "Time From": "11:30 AM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "40", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "It might be the result of good deeds from his forefathers that he has gained residing in Jamea", "Type": "Awwala Orientation", "Time to": "11:30 AM", "Time From": "11:35 AM", "Duration in hours": "0:05:00", "Total Hours": "", "_duration_hours": 0.08333333333333333}, {"Sr No": "41", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "???????? ????? ???? ???? ????????", "Type": "Awwala Orientation", "Time to": "11:35 AM", "Time From": "11:50 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "42", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "???? ????????", "Type": "Awwala Orientation", "Time to": "11:50 AM", "Time From": "12:05 PM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "43", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "Closing ceremony", "Type": "Awwala Orientation", "Time to": "12:05 PM", "Time From": "12:15 PM", "Duration in hours": "0:10:00", "Total Hours": "", "_duration_hours": 0.16666666666666666}, {"Sr No": "44", "Date": "4/12/2025", "Hijri Date": "14-Shawwal-1446", "Description": "Band performance", "Type": "Awwala Orientation", "Time to": "12:15 PM", "Time From": "12:55 PM", "Duration in hours": "0:40:00", "Total Hours": "", "_duration_hours": 0.6666666666666666}, {"Sr No": "45", "Date": "4/17/2025", "Hijri Date": "19-Shawwal-1446", "Description": "Kitab-ul-himmah", "Type": "Marhala Barnamaj", "Time to": "2:00 PM", "Time From": "3:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "46", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Welcoming notes Shk Moiz Bh kasamji", "Type": "Darse Burhani", "Time to": "8:15 AM", "Time From": "8:30 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "47", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Kalemaat Nooraniyah", "Type": "Darse Burhani", "Time to": "8:30 AM", "Time From": "8:45 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "48", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Syedi Ameer al-Jamea QR bayaan", "Type": "Darse Burhani", "Time to": "8:45 AM", "Time From": "9:00 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "49", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Masul al-Aam keynotes", "Type": "Darse Burhani", "Time to": "9:00 AM", "Time From": "9:15 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "50", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Overview of the institution's mission, values, and environment", "Type": "Darse Burhani", "Time to": "9:15 AM", "Time From": "9:30 AM", "Duration in hours": "0:15:00", "Total Hours": "", "_duration_hours": 0.25}, {"Sr No": "51", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Parenting Teens with Purpose &\nPositivity\n· Understanding teenage transitions\n· Communication do's and don'ts\n· Supporting without overcontrolling\n· Letting go of comparison\n· Institution collaboration", "Type": "Darse Burhani", "Time to": "9:30 AM", "Time From": "10:00 AM", "Duration in hours": "0:30:00", "Total Hours": "", "_duration_hours": 0.5}, {"Sr No": "52", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Skit Performance", "Type": "Darse Burhani", "Time to": "10:00 AM", "Time From": "10:20 AM", "Duration in hours": "0:20:00", "Total Hours": "", "_duration_hours": 0.3333333333333333}, {"Sr No": "53", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Daily Schedule \n· Curriculum \n· Rules and Responsibilities \n· Communication and \nCorrespondence \n· Facility Usage and General \nConduct \n· AVIT (WebX)", "Type": "Darse Burhani", "Time to": "10:20 AM", "Time From": "12:00 PM", "Duration in hours": "1:40:00", "Total Hours": "", "_duration_hours": 1.6666666666666665}, {"Sr No": "54", "Date": "4/19/2025", "Hijri Date": "21-Shawwal-1446", "Description": "Trump Tariff", "Type": "Nashat Saqafi", "Time to": "12:15 PM", "Time From": "1:15 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "55", "Date": "4/21/2025", "Hijri Date": "23-Shawwal-1446", "Description": "Health & wellness-US mental health team", "Type": "Mahal al Shifa", "Time to": "2:00 PM", "Time From": "7:30 PM", "Duration in hours": "5:30:00", "Total Hours": "", "_duration_hours": 5.5}, {"Sr No": "56", "Date": "4/22/2025", "Hijri Date": "24-Shawwal-1446", "Description": "Health & wellness-US mental health team", "Type": "Mahal al Shifa", "Time to": "2:00 PM", "Time From": "7:30 PM", "Duration in hours": "5:30:00", "Total Hours": "", "_duration_hours": 5.5}, {"Sr No": "57", "Date": "4/23/2025", "Hijri Date": "25-Shawwal-1446", "Description": "Health & wellness-US mental health team", "Type": "Mahal al Shifa", "Time to": "2:00 PM", "Time From": "5:30 PM", "Duration in hours": "3:30:00", "Total Hours": "", "_duration_hours": 3.5}, {"Sr No": "58", "Date": "4/24/2025", "Hijri Date": "26-Shawwal-1446", "Description": "Case Study Dyslexia & Hifz-Talabat & Talebaat", "Type": "Mahal al Shifa", "Time to": "8:30 AM", "Time From": "10:30 AM", "Duration in hours": "2:00:00", "Total Hours": "", "_duration_hours": 2.0}, {"Sr No": "59", "Date": "4/24/2025", "Hijri Date": "26-Shawwal-1446", "Description": "Health & wellness-US mental health team", "Type": "Mahal al Shifa", "Time to": "2:00 PM", "Time From": "7:30 PM", "Duration in hours": "5:30:00", "Total Hours": "", "_duration_hours": 5.5}, {"Sr No": "60", "Date": "4/26/2025", "Hijri Date": "28-Shawwal-1446", "Description": "Munajat 1446 Istibsaar", "Type": "Jameiyah Ula", "Time to": "12:00 PM", "Time From": "1:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "61", "Date": "4/26/2025", "Hijri Date": "28-Shawwal-1446", "Description": "MMB talebaat TGM", "Type": "TGM", "Time to": "5:00 PM", "Time From": "6:10 PM", "Duration in hours": "1:10:00", "Total Hours": "", "_duration_hours": 1.1666666666666667}, {"Sr No": "62", "Date": "4/28/2025", "Hijri Date": "01-Zilqad-al-Haraam -1446", "Description": "Tashreef dept", "Type": "Nashat Saqafi", "Time to": "4:00 PM", "Time From": "4:30 PM", "Duration in hours": "0:30:00", "Total Hours": "", "_duration_hours": 0.5}, {"Sr No": "63", "Date": "4/29/2025", "Hijri Date": "02-Zilqad-al-Haraam-1446", "Description": "Al Mustawa al Matloob", "Type": "Saqafat Amma", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "64", "Date": "5/1/2025", "Hijri Date": "04-Zilqad-al-Haraam-1446", "Description": "Nizam Ulya wa takhassus", "Type": "Jameiyah ulya wa Takhassus", "Time to": "2:00 PM", "Time From": "3:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "65", "Date": "5/3/2025", "Hijri Date": "06-Zilqad-al-Haraam-1446", "Description": "Ashara Ohbat Khidmat Husainiyah", "Type": "Shuoon Amma", "Time to": "12:15 PM", "Time From": "1:20 PM", "Duration in hours": "1:05:00", "Total Hours": "", "_duration_hours": 1.0833333333333333}, {"Sr No": "66", "Date": "5/5/2025", "Hijri Date": "08-Zilqad-al-Haraam-1446", "Description": "NS Tafreeh Talks", "Type": "Nashat Saqafi", "Time to": "4:00 PM", "Time From": "4:35 PM", "Duration in hours": "0:35:00", "Total Hours": "", "_duration_hours": 0.5833333333333334}, {"Sr No": "67", "Date": "5/9/2025", "Hijri Date": "12-Zilqad-al-Haraam-1446", "Description": "????? ?????? - Talabat", "Type": "Rehearsal", "Time to": "3:45 PM", "Time From": "4:45 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "69", "Date": "5/10/2025", "Hijri Date": "13-Zilqad-al-Haraam-1446", "Description": "Tareekh o Tadween il Hadees", "Type": "Jameiyah Ula", "Time to": "12:15 PM", "Time From": "1:20 PM", "Duration in hours": "1:05:00", "Total Hours": "", "_duration_hours": 1.0833333333333333}, {"Sr No": "70", "Date": "5/14/2025", "Hijri Date": "17-Zilqad-al-Haraam-1446", "Description": "MMB talebaat TGM", "Type": "TGM", "Time to": "5:00 PM", "Time From": "6:10 PM", "Duration in hours": "1:10:00", "Total Hours": "", "_duration_hours": 1.1666666666666667}, {"Sr No": "71", "Date": "5/15/2025", "Hijri Date": "18-Zilqad-al-Haraam-1446", "Description": "Kutama Muzakeraat", "Type": "Jameiyah Saniya", "Time to": "2:00 PM", "Time From": "3:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "72", "Date": "5/15/2025", "Hijri Date": "18-Zilqad-al-Haraam-1446", "Description": "Mazar Talks", "Type": "Nashat Saqafi", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "73", "Date": "5/17/2025", "Hijri Date": "20-Zilqad-al-Haraam-1446", "Description": "Poetry Talks", "Type": "Nashat Saqafi", "Time to": "12:15 PM", "Time From": "1:20 PM", "Duration in hours": "1:05:00", "Total Hours": "", "_duration_hours": 1.0833333333333333}, {"Sr No": "74", "Date": "5/19/2025", "Hijri Date": "22-Zilqad-al-Haraam-1446", "Description": "????? ????????? ???????", "Type": "Munaqasha", "Time to": "3:15 PM", "Time From": "4:40 PM", "Duration in hours": "1:25:00", "Total Hours": "", "_duration_hours": 1.4166666666666667}, {"Sr No": "75", "Date": "5/21/2025", "Hijri Date": "24-Zilqad-al-Haraam-1446", "Description": "????? ????????? ???????", "Type": "Munaqasha", "Time to": "3:15 PM", "Time From": "4:40 PM", "Duration in hours": "1:25:00", "Total Hours": "", "_duration_hours": 1.4166666666666667}, {"Sr No": "76", "Date": "5/22/2025", "Hijri Date": "25-Zilqad-al-Haraam-1446", "Description": "????? ????????? ???????", "Type": "Munaqasha", "Time to": "3:15 PM", "Time From": "5:00 PM", "Duration in hours": "1:45:00", "Total Hours": "", "_duration_hours": 1.75}, {"Sr No": "77", "Date": "5/29/2025", "Hijri Date": "02-Zil Hijja-al-Haraam-1446", "Description": "Malasiyan PR Visit", "Type": "Visit", "Time to": "11:15 AM", "Time From": "11:55 AM", "Duration in hours": "0:40:00", "Total Hours": "", "_duration_hours": 0.6666666666666666}, {"Sr No": "78", "Date": "5/30/2025", "Hijri Date": "03-Zil Hijja-al-Haraam-1446", "Description": "Saire ilmi", "Type": "TGM", "Time to": "4:40 PM", "Time From": "6:00 PM", "Duration in hours": "1:20:00", "Total Hours": "", "_duration_hours": 1.3333333333333333}, {"Sr No": "79", "Date": "5/31/2025", "Hijri Date": "04-Zil Hijja-al-Haraam-1446", "Description": "???? ???? ???? ?????? ?? ????? ????????", "Type": "Jameiyah Ula", "Time to": "12:15 PM", "Time From": "1:30 PM", "Duration in hours": "1:15:00", "Total Hours": "", "_duration_hours": 1.25}, {"Sr No": "80", "Date": "6/1/2025", "Hijri Date": "06-Zil Hijja-al-Haraam-1446", "Description": "1446-12-06 _NS-Book Restoration-Shk Mohammed bh Rampurawala", "Type": "Nashat Saqafi", "Time to": "4:00 AM", "Time From": "4:45 AM", "Duration in hours": "0:45:00", "Total Hours": "", "_duration_hours": 0.75}, {"Sr No": "81", "Date": "6/3/2025", "Hijri Date": "08-Zil Hijja-al-Haraam-1446", "Description": "????? ????????? ???????", "Type": "Munaqasha", "Time to": "3:15 PM", "Time From": "5:00 PM", "Duration in hours": "1:45:00", "Total Hours": "", "_duration_hours": 1.75}, {"Sr No": "82", "Date": "6/17/2025", "Hijri Date": "21-Zil Hijja-al-Haraam-1446", "Description": "Ashara Ohbat Talebaat", "Type": "Shuoon Amma", "Time to": "2:45 PM", "Time From": "4:00 PM", "Duration in hours": "1:15:00", "Total Hours": "", "_duration_hours": 1.25}, {"Sr No": "83", "Date": "12/7/2025", "Hijri Date": "17-Moharram-1447", "Description": "Hormesis", "Type": "Nashat Saqafi", "Time to": "12:00 PM", "Time From": "1:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "84", "Date": "7/15/2025", "Hijri Date": "20-Moharram-1447", "Description": "Waaz Istibsaar AM47", "Type": "Taleem barnamaj", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "85", "Date": "7/16/2025", "Hijri Date": "21-Moharram-1447", "Description": "Waaz Istibsaar AM47", "Type": "Taleem barnamaj", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "86", "Date": "7/17/2025", "Hijri Date": "23-Moharram-1447", "Description": "Maqala Talkhees", "Type": "Jameiyah Ula", "Time to": "2:00 PM", "Time From": "3:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "87", "Date": "7/17/2025", "Hijri Date": "22-Moharram-1447", "Description": "Waaz Istibsaar AM47", "Type": "Taleem barnamaj", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "88", "Date": "7/18/2025", "Hijri Date": "23-Moharram-1447", "Description": "Waaz Istibsaar AM47", "Type": "Taleem barnamaj", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "89", "Date": "7/19/2025", "Hijri Date": "24-Moharram-1447", "Description": "Coastal Connections", "Type": "Nashat Saqafi", "Time to": "12:00 PM", "Time From": "1:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "90", "Date": "7/21/2025", "Hijri Date": "26-Moharram-1447", "Description": "Waaz Istibsaar AM47", "Type": "Taleem barnamaj", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "91", "Date": "7/8/2025", "Hijri Date": "13-Safar-1447", "Description": "Sigat al Qaza _wirasat", "Type": "Jameiyah ulya wa Takhassus", "Time to": "2:00 PM", "Time From": "3:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "92", "Date": "9/8/2025", "Hijri Date": "15-Safar-1447", "Description": "Educational Counselling Barnamaj", "Type": "Imtehanaat Ukhra", "Time to": "12:05 PM", "Time From": "1:25 PM", "Duration in hours": "1:20:00", "Total Hours": "", "_duration_hours": 1.3333333333333333}, {"Sr No": "93", "Date": "9/8/2025", "Hijri Date": "15-Safar-1447", "Description": "Kunuz al Iqtebasaat Quiz", "Type": "Talebaat", "Time to": "1:45 PM", "Time From": "4:40 PM", "Duration in hours": "2:55:00", "Total Hours": "", "_duration_hours": 2.9166666666666665}, {"Sr No": "94", "Date": "9/8/2025", "Hijri Date": "15-Safar-1447", "Description": "MMB talebaat TGM", "Type": "TGM", "Time to": "4:30 PM", "Time From": "6:30 PM", "Duration in hours": "2:00:00", "Total Hours": "", "_duration_hours": 2.0}, {"Sr No": "95", "Date": "8/16/2025", "Hijri Date": "22-Safar-1447", "Description": "Silicon to Product - journey of an Atom", "Type": "Nashat Saqafi", "Time to": "12:00 PM", "Time From": "1:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "96", "Date": "8/18/2025", "Hijri Date": "24-Safar-1447", "Description": "Elaam Department Podcast", "Type": "Nashat Saqafi", "Time to": "4:00 PM", "Time From": "5:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "97", "Date": "8/21/2025", "Hijri Date": "27-Safar-1447", "Description": "Muzakera - Imam Hasan AS Khutba", "Type": "Jameiyah ulya wa Takhassus", "Time to": "2:00 PM", "Time From": "3:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "98", "Date": "8/23/2025", "Hijri Date": "29-Safar-1447", "Description": "PRO Visit", "Type": "Visit", "Time to": "5:30 PM", "Time From": "8:30 PM", "Duration in hours": "3:00:00", "Total Hours": "", "_duration_hours": 3.0}, {"Sr No": "99", "Date": "8/25/2025", "Hijri Date": "02-Rabi al awwal-1446", "Description": "ITNC", "Type": "Nashat Saqafi", "Time to": "4:00 PM", "Time From": "5:00 PM", "Duration in hours": "1:00:00", "Total Hours": "", "_duration_hours": 1.0}, {"Sr No": "100", "Date": "8/25/2025", "Hijri Date": "02-Rabi al awwal-1446", "Description": "Janah 2 hours practice session was held in audi", "Type": "Janah al tarrannum", "Time to": "5:00 PM", "Time From": "7:00 PM", "Duration in hours": "2:00:00", "Total Hours": "", "_duration_hours": 2.0}, {"Sr No": "101", "Date": "8/30/2025", "Hijri Date": "07-Rabi al awwal-1446", "Description": "Lawyer-Women rights", "Type": "Nashat Saqafi", "Time to": "12:00 PM", "Time From": "1:45 PM", "Duration in hours": "1:45:00", "Total Hours": "", "_duration_hours": 1.75}, {"Sr No": "102", "Date": "9/1/2025", "Hijri Date": "09-Rabi al awwal-1446", "Description": "Kunuz Rehearsal", "Type": "Rehearsal", "Time to": "11:00 AM", "Time From": "1:30 PM", "Duration in hours": "2:30:00", "Total Hours": "", "_duration_hours": 2.5}, {"Sr No": "103", "Date": "9/1/2025", "Hijri Date": "09-Rabi al awwal-1446", "Description": "Kunuz Rehearsal", "Type": "Rehearsal", "Time to": "6:00 PM", "Time From": "7:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "104", "Date": "9/2/2025", "Hijri Date": "10-Rabi al awwal-1446", "Description": "Kunuz ul iqtibasaat il nayyera", "Type": "Talebaat", "Time to": "10:00 AM", "Time From": "2:00 PM", "Duration in hours": "4:00:00", "Total Hours": "", "_duration_hours": 4.0}, {"Sr No": "105", "Date": "9/6/2025", "Hijri Date": "14-Rabi al awwal-1446", "Description": "Muzakera - ?????? ??????", "Type": "Jameiyah Ula", "Time to": "12:00 PM", "Time From": "1:30 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "106", "Date": "9/9/2025", "Hijri Date": "17-Rabi al awwal-1446", "Description": "TGM PTM Khamesa", "Type": "TGM", "Time to": "1:00 PM", "Time From": "3:00 PM", "Duration in hours": "2:00:00", "Total Hours": "", "_duration_hours": 2.0}, {"Sr No": "107", "Date": "9/10/2025", "Hijri Date": "18-Rabi al awwal-1446", "Description": "Band Rehearsal", "Type": "Rehearsal", "Time to": "4:00 PM", "Time From": "6:10 PM", "Duration in hours": "2:10:00", "Total Hours": "", "_duration_hours": 2.1666666666666665}, {"Sr No": "108", "Date": "9/11/2025", "Hijri Date": "19-Rabi al awwal-1446", "Description": "TGM", "Type": "TGM", "Time to": "12:30 PM", "Time From": "2:00 PM", "Duration in hours": "1:30:00", "Total Hours": "", "_duration_hours": 1.5}, {"Sr No": "109", "Date": "9/11/2025", "Hijri Date": "19-Rabi al awwal-1446", "Description": "Raudat-al-Quran-al-Kareem", "Type": "Rental", "Time to": "3:00 PM", "Time From": "7:30 PM", "Duration in hours": "4:30:00", "Total Hours": "", "_duration_hours": 4.5}, {"Sr No": "110", "Date": "9/12/2025", "Hijri Date": "20-Rabi al awwal-1446", "Description": "Raudat-al-Quran-al-Kareem", "Type": "Rental", "Time to": "3:00 PM", "Time From": "10:30 PM", "Duration in hours": "7:30:00", "Total Hours": "", "_duration_hours": 7.5}, {"Sr No": "111", "Date": "9/16/2025", "Hijri Date": "24-Rabi al awwal-1446", "Description": "Janah ul tarranum Talebaat Rehearsal", "Type": "Rehearsal", "Time to": "4:00 PM", "Time From": "7:30 PM", "Duration in hours": "3:30:00", "Total Hours": "", "_duration_hours": 3.5}, {"Sr No": "112", "Date": "9/17/2025", "Hijri Date": "25-Rabi al awwal-1446", "Description": "Janah ul tarranum Talebaat Annual program", "Type": "Janah al tarrannum", "Time to": "12:00 PM", "Time From": "9:40 PM", "Duration in hours": "9:40:00", "Total Hours": "", "_duration_hours": 9.666666666666666}, {"Sr No": "113", "Date": "9/20/2025", "Hijri Date": "28-Rabi al awwal-1447", "Description": "AI & EI Counselling - Marol Jamat", "Type": "Rental", "Time to": "7:00 PM", "Time From": "10:15 PM", "Duration in hours": "3:15:00", "Total Hours": "", "_duration_hours": 3.25}, {"Sr No": "114", "Date": "10/14/2025", "Hijri Date": "22-Rabi al akhar-1447", "Description": "Nadwat - AJ Shz Jaffer us Sadiq bs Imaduddin Saheb", "Type": "Nadwat", "Time to": "9:00 AM", "Time From": "11:00 AM", "Duration in hours": "2:00:00", "Total Hours": "", "_duration_hours": 2.0}, {"Sr No": "115", "Date": "10/14/2025", "Hijri Date": "22-Rabi al akhar-1447", "Description": "Janah ul tarranum Talabat Rehearsal", "Type": "Rehearsal", "Time to": "2:30 PM", "Time From": "8:00 PM", "Duration in hours": "5:30:00", "Total Hours": "", "_duration_hours": 5.5}, {"Sr No": "116", "Date": "10/15/2025", "Hijri Date": "23-Rabi al akhar-1447", "Description": "Janah ul tarranum, program tayyari - tazyeen, setup etc", "Type": "Rehearsal", "Time to": "9:00 AM", "Time From": "1:00 PM", "Duration in hours": "4:00:00", "Total Hours": "", "_duration_hours": 4.0}, {"Sr No": "116", "Date": "10/15/2025", "Hijri Date": "23-Rabi al akhar-1447", "Description": "Janah ul tarranum Talabat Recording", "Type": "Rehearsal", "Time to": "3:00 PM", "Time From": "8:30 PM", "Duration in hours": "5:30:00", "Total Hours": "", "_duration_hours": 5.5}, {"Sr No": "117", "Date": "10/16/2025", "Hijri Date": "24-Rabi al akhar-1447", "Description": "Janah ul tarranum Talabat", "Type": "Rehearsal", "Time to": "3:00 PM", "Time From": "6:00 PM", "Duration in hours": "3:00:00", "Total Hours": "", "_duration_hours": 3.0}, {"Sr No": "118", "Date": "10/16/2025", "Hijri Date": "24-Rabi al akhar-1447", "Description": "Janah ul tarranum Talabat", "Type": "Janah al tarrannum", "Time to": "6:00 PM", "Time From": "9:00 PM", "Duration in hours": "3:00:00", "Total Hours": "", "_duration_hours": 3.0}, {"Sr No": "119", "Date": "10/27/2025", "Hijri Date": "04-Jumada al-Ula-1447", "Description": "D7-Nujoom Barnamaj", "Type": "Jameiyah Ula", "Time to": "11:30 AM", "Time From": "1:30 PM", "Duration in hours": "2:00:00", "Total Hours": "", "_duration_hours": 2.0}];
+
+// Tab switching
+function setActiveButton(id){
+  document.querySelectorAll('.side-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-' + id).classList.add('active');
+}
+function showSection(id){
+  document.querySelectorAll('.page-section').forEach(s=>s.style.display='none');
+  document.getElementById(id).style.display='block';
+  setActiveButton(id);
+}
+document.getElementById('btn-overview').addEventListener('click', ()=> showSection('overview'));
+document.getElementById('btn-monthly').addEventListener('click', ()=> showSection('monthly'));
+document.getElementById('btn-table').addEventListener('click', ()=> showSection('table'));
+
+// data helpers
+function buildItems(){ return ITEMS.map(it=>{ it._duration_hours = Number(it._duration_hours)||0; return it; }); }
+
+function aggregateByType(items){
+  const map = {};
+  items.forEach(it=>{
+    const t = (it['Type']||it['type']||it['TYPE']||it['Type of']||'Unknown').toString();
+    map[t] = (map[t]||0) + (Number(it._duration_hours)||0);
+  });
+  return map;
+}
+
+function aggregateByMonth(items){
+  const map = {};
+  items.forEach(it=>{
+    const hd = it['Hijri Date'] || it['hijri date'] || it['Hijri'] || it['hijri'] || '';
+    let key = 'Unknown';
+    if(typeof hd === 'string' && hd.trim()){
+      const parts = hd.split(/[^A-Za-z0-9]+/).filter(Boolean);
+      if(parts.length>=2){
+        key = parts[1] + ' ' + (parts[2]||'');
+      } else { key = hd; }
+    } else {
+      const alt = it['Date'] || it['date'] || '';
+      if(alt){
+        const d = new Date(alt);
+        if(!isNaN(d)) key = d.toLocaleString(undefined,{month:'short',year:'numeric'});
+      }
+    }
+    map[key] = (map[key]||0) + (Number(it._duration_hours)||0);
+  });
+  return map;
+}
+
+function updateKPIs(items){
+  document.getElementById('totalPrograms').textContent = items.length;
+  const total = items.reduce((s,i)=>s + (Number(i._duration_hours)||0),0);
+  document.getElementById('totalHours').textContent = total.toFixed(2);
+  const any = items.find(i=> (i['Hijri Date']||'').match(/\d{3,4}/) );
+  const hij = any ? ( (any['Hijri Date']||'').match(/(\d{3,4})/)[1] ) : '-';
+  document.getElementById('yearHijri').textContent = new Date().getFullYear() + ' / ' + hij;
+}
+
+// charts
+let barChart, lineChart, monthlyBigChart;
+function initCharts(){
+  const bctx = document.getElementById('barChart').getContext('2d');
+  const lctx = document.getElementById('lineChart').getContext('2d');
+  const mctx = document.getElementById('monthlyBigChart').getContext('2d');
+  barChart = new Chart(bctx,{type:'bar',data:{labels:[],datasets:[{label:'Hours',data:[],backgroundColor:'rgba(58,160,255,0.8)'}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}});
+  lineChart = new Chart(lctx,{type:'line',data:{labels:[],datasets:[{label:'Total Hours',data:[],fill:false,borderColor:'rgba(58,160,255,0.9)',tension:0.2}]},options:{plugins:{legend:{display:false}}}});
+  monthlyBigChart = new Chart(mctx,{type:'line',data:{labels:[],datasets:[{label:'Total Hours',data:[],fill:false,borderColor:'rgba(58,160,255,0.9)',tension:0.2}]},options:{plugins:{legend:{display:false}}}});
+}
+
+function renderBar(typeMap){
+  const labels = Object.keys(typeMap).sort((a,b)=> typeMap[b]-typeMap[a]);
+  barChart.data.labels = labels;
+  barChart.data.datasets[0].data = labels.map(l=>typeMap[l]);
+  barChart.update();
+}
+function renderLine(monthMap){
+  const labels = Object.keys(monthMap);
+  lineChart.data.labels = labels;
+  lineChart.data.datasets[0].data = labels.map(l=>monthMap[l]);
+  lineChart.update();
+}
+function renderMonthlyBig(monthMap){
+  const labels = Object.keys(monthMap);
+  monthlyBigChart.data.labels = labels;
+  monthlyBigChart.data.datasets[0].data = labels.map(l=>monthMap[l]);
+  monthlyBigChart.update();
+}
+
+// table renders
+function renderTable(items){
+  const tbody = document.querySelector('#dataTable tbody');
+  tbody.innerHTML = '';
+  const rowsPer = Number(document.getElementById('rowsPerPage').value) || 50;
+  const q = (document.getElementById('search').value||'').toLowerCase();
+  const filtered = items.filter(it=> (it['Description']||it['description']||'').toLowerCase().includes(q) || (it['Type']||'').toLowerCase().includes(q) );
+  filtered.slice(0,rowsPer).forEach(it=>{
+    const tr = document.createElement('tr');
+    const tdDesc = document.createElement('td'); tdDesc.textContent = it['Description'] || it['description'] || ''; tr.appendChild(tdDesc);
+    const tdType = document.createElement('td'); tdType.textContent = it['Type'] || it['type'] || ''; tr.appendChild(tdType);
+    const tdHij = document.createElement('td'); tdHij.textContent = it['Hijri Date'] || it['hijri date'] || ''; tr.appendChild(tdHij);
+    const tdDur = document.createElement('td'); tdDur.textContent = (Number(it._duration_hours)||0).toFixed(2); tr.appendChild(tdDur);
+    tbody.appendChild(tr);
+  });
+}
+function renderFullTable(items){
+  const tbody = document.querySelector('#fullTable tbody');
+  tbody.innerHTML = '';
+  const rowsPer = Number(document.getElementById('rowsPerPage2').value) || items.length;
+  const q = (document.getElementById('search2').value||'').toLowerCase();
+  const filtered = items.filter(it=> Object.values(it).join(' ').toLowerCase().includes(q) );
+  filtered.slice(0,rowsPer).forEach(it=>{
+    const tr = document.createElement('tr');
+    var td = document.createElement('td'); td.textContent = it['Sr No'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Date'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Hijri Date'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Description'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Type'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Time to'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Time From'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Duration in hours'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['Total Hours'] || ''; tr.appendChild(td);
+    var td = document.createElement('td'); td.textContent = it['_duration_hours'] || ''; tr.appendChild(td);
+    document.querySelector('#fullTable tbody').appendChild(tr);
+  });
+}
+
+function refreshAll(){
+  const items = buildItems();
+  updateKPIs(items);
+  renderBar(aggregateByType(items));
+  renderLine(aggregateByMonth(items));
+  renderMonthlyBig(aggregateByMonth(items));
+  renderTable(items);
+  renderFullTable(items);
+}
+
+document.getElementById('search').addEventListener('input', ()=>{ renderTable(buildItems()); });
+document.getElementById('rowsPerPage').addEventListener('change', ()=>{ renderTable(buildItems()); });
+document.getElementById('search2').addEventListener('input', ()=>{ renderFullTable(buildItems()); });
+document.getElementById('rowsPerPage2').addEventListener('change', ()=>{ renderFullTable(buildItems()); });
+
+initCharts();
+refreshAll();
+
+// show overview by default
+showSection('overview');
+</script>
+</body>
+</html>
