@@ -78,7 +78,7 @@ input[type="text"],input[type="number"],select{padding:8px;border-radius:6px;bor
         </div>
         <div style="max-height:420px;overflow:auto">
           <table class="table" id="dataTable">
-            <thead><tr><th>Description</th><th>Type</th><th>Hijri Date</th><th>Total Hours</th></tr></thead>
+            <thead><tr><th>Description</th><th>Type</th><th>Hijri Date</th><th>Duration (hrs)</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -183,7 +183,7 @@ function renderTable(items){
   const filtered=items.filter(it=>(it["Description"]||"").toLowerCase().includes(q)||(it["Type"]||"").toLowerCase().includes(q));
   filtered.slice(0,rowsPer).forEach(it=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${it["Description"]||""}</td><td>${it["Type"]||""}</td><td>${it["Hijri Date"]||""}</td><td>${it["Total Hours"]||""}</td>`;
+    tr.innerHTML=`<td>${it["Description"]||""}</td><td>${it["Type"]||""}</td><td>${it["Hijri Date"]||""}</td><td>${(Number(it._duration_hours)||0).toFixed(2)}</td>`;
     tbody.appendChild(tr);
   });
 }
