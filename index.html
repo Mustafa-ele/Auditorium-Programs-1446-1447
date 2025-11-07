@@ -183,7 +183,7 @@ function renderTable(items){
   const filtered=items.filter(it=>(it["Description"]||"").toLowerCase().includes(q)||(it["Type"]||"").toLowerCase().includes(q));
   filtered.slice(0,rowsPer).forEach(it=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${it["Description"]||""}</td><td>${it["Type"]||""}</td><td>${it["Hijri Date"]||""}</td><td>${(Number(it._duration_hours)||0).toFixed(2)}</td>`;
+    tr.innerHTML=`<td>${it["Description"]||""}</td><td>${it["Type"]||""}</td><td>${it["Hijri Date"]||""}</td><td>${it["Duration in hours"]||""}</td>`;
     tbody.appendChild(tr);
   });
 }
