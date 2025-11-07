@@ -3,35 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Auditorium Dashboard - Simplified Overview</title>
+<title>Auditorium Dashboard - Overview</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{ --navy:#0b2940; --panel:#e2f3fb; --card:#cfe9fb; --accent:#3aa0ff; --muted:#6b93a6; }
+:root{--navy:#0b2940;--panel:#e2f3fb;--card:#cfe9fb;--accent:#3aa0ff;}
 *{box-sizing:border-box}
-body{margin:0;font-family:Inter, system-ui, Arial;background:#dff3fb;color:#07203a}
+body{margin:0;font-family:Inter,system-ui,Arial;background:#dff3fb;color:#07203a}
 .app{display:flex;min-height:100vh}
 .sidebar{width:220px;background:var(--navy);color:#e6f7ff;padding:28px 18px}
 .logo{font-weight:700;font-size:20px;margin-bottom:14px}
 .subtitle{font-size:12px;color:rgba(255,255,255,0.85);margin-bottom:18px}
 .side-btn{display:block;width:100%;text-align:left;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);color:#dff6ff;background:transparent;margin:8px 0;cursor:pointer}
-.side-btn.active{background:rgba(255,255,255,0.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02);border-left:4px solid var(--accent);padding-left:10px}
+.side-btn.active{background:rgba(255,255,255,0.04);border-left:4px solid var(--accent);padding-left:10px}
 .small-info{font-size:12px;color:#9fc0d6;margin-top:14px}
 .content{flex:1;padding:22px 28px;overflow:auto}
-.top-cards{display:flex;gap:18px;margin-bottom:18px}
+.top-cards{display:flex;gap:18px;margin-bottom:18px;flex-wrap:wrap}
 .card{background:var(--card);padding:14px;border-radius:10px;min-width:160px}
-.card .label{font-size:13px;color:#0b2940;opacity:0.7}
-.card .value{font-weight:700;font-size:20px;margin-top:6px;color:#07203a}
-.panel{background:var(--panel);padding:16px;border-radius:10px;min-height:140px;margin-bottom:18px}
+.card .label{font-size:13px;opacity:0.7}
+.card .value{font-weight:700;font-size:20px;margin-top:6px}
+.layout2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.panel{background:var(--panel);padding:16px;border-radius:10px;min-height:140px}
 .chart-wrap{height:320px;padding:6px}
 .table-wrapper{background:var(--panel);padding:12px;border-radius:8px;margin-top:12px}
-input[type="text"], input[type="number"], select{padding:8px;border-radius:6px;border:1px solid #cfe4ee}
+input[type="text"],input[type="number"],select{padding:8px;border-radius:6px;border:1px solid #cfe4ee}
 .table{width:100%;border-collapse:collapse}
-.table th{background:transparent;text-align:left;padding:10px;color:#07203a;border-bottom:1px solid rgba(0,0,0,0.06)}
+.table th{background:transparent;text-align:left;padding:10px;border-bottom:1px solid rgba(0,0,0,0.06)}
 .table td{padding:10px;border-top:1px solid rgba(0,0,0,0.04);font-size:14px}
 .controls{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-.note{font-size:13px;color:#24516b}
+@media(max-width:900px){.layout2{grid-template-columns:1fr}.sidebar{display:none}}
 </style>
 </head>
 <body>
@@ -39,7 +40,7 @@ input[type="text"], input[type="number"], select{padding:8px;border-radius:6px;b
   <aside class="sidebar">
     <div class="logo">Auditorium</div>
     <div class="subtitle">Programs Dashboard</div>
-    <button class="side-btn active" id="btn-overview">Overview</button>
+    <button class="side-btn active">Overview</button>
     <div class="small-info">Data from your CSV file</div>
   </aside>
 
@@ -51,31 +52,35 @@ input[type="text"], input[type="number"], select{padding:8px;border-radius:6px;b
         <div class="card"><div class="label">Total Hours</div><div id="totalHours" class="value">—</div></div>
       </div>
 
-      <div class="panel">
-        <div style="font-weight:600;margin-bottom:8px">Duration in hours by Type</div>
-        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
-      </div>
-
-      <!-- NEW Monthly Chart Section -->
-      <div class="panel">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-weight:600;">Monthly Data</div>
-          <div>
-            <label style="font-size:13px;color:#07203a">Select Month: </label>
-            <select id="monthFilter"></select>
-          </div>
+      <div class="layout2">
+        <div class="panel">
+          <div style="font-weight:600;margin-bottom:8px">Duration in hours by Type</div>
+          <div class="chart-wrap"><canvas id="barChart"></canvas></div>
         </div>
-        <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-weight:600;">Monthly Data</div>
+            <div>
+              <label style="font-size:13px;">Select Month: </label>
+              <select id="monthFilter"></select>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+        </div>
       </div>
 
       <div class="table-wrapper">
         <div style="font-weight:600;margin-bottom:8px">Data Table</div>
         <div class="controls">
           <input id="search" type="text" placeholder="Search description or type" style="flex:1">
-          <label class="note">Show rows <input id="rowsPerPage" type="number" value="20" style="width:70px;margin-left:6px"></label>
+          <label>Show rows <input id="rowsPerPage" type="number" value="20" style="width:70px;margin-left:6px"></label>
         </div>
         <div style="max-height:420px;overflow:auto">
-          <table class="table" id="dataTable"><thead><tr><th>Description</th><th>Type</th><th>Hijri Date</th><th>Duration (hrs)</th></tr></thead><tbody></tbody></table>
+          <table class="table" id="dataTable">
+            <thead><tr><th>Description</th><th>Type</th><th>Hijri Date</th><th>Total Hours</th></tr></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -83,17 +88,16 @@ input[type="text"], input[type="number"], select{padding:8px;border-radius:6px;b
 </div>
 
 <script>
-const CSV_PATH = "data.csv";  // <-- PUT your CSV path or URL here
-
+const CSV_PATH = "data.csv";  // 🔹 Put your CSV file name or URL here
 let ITEMS = [];
 
-function loadCSV() {
-  Papa.parse(CSV_PATH, {
-    download: true,
-    header: true,
-    complete: (res) => {
-      ITEMS = res.data.map(it => {
-        it._duration_hours = Number(it._duration_hours) || parseFloat(it["Duration in hours"]) || 0;
+function loadCSV(){
+  Papa.parse(CSV_PATH,{
+    download:true,header:true,
+    complete:(res)=>{
+      ITEMS=res.data.map(it=>{
+        it._duration_hours=Number(it._duration_hours)||parseFloat(it["Duration in hours"])||0;
+        it["Total Hours"]=it["Total Hours"]||it._duration_hours.toFixed(2);
         return it;
       });
       initDashboard();
@@ -104,7 +108,7 @@ function loadCSV() {
 function aggregateByType(items){
   const map={};
   items.forEach(it=>{
-    const t=it['Type']||'Unknown';
+    const t=it["Type"]||"Unknown";
     map[t]=(map[t]||0)+(Number(it._duration_hours)||0);
   });
   return map;
@@ -113,9 +117,9 @@ function aggregateByType(items){
 function aggregateByMonth(items){
   const map={};
   items.forEach(it=>{
-    const date = new Date(it['Date']);
+    const date=new Date(it["Date"]);
     if(!isNaN(date)){
-      const m = date.toLocaleString('default',{month:'long',year:'numeric'});
+      const m=date.toLocaleString("default",{month:"long",year:"numeric"});
       map[m]=(map[m]||0)+(Number(it._duration_hours)||0);
     }
   });
@@ -123,24 +127,24 @@ function aggregateByMonth(items){
 }
 
 function updateKPIs(items){
-  document.getElementById('totalPrograms').textContent=items.length;
+  document.getElementById("totalPrograms").textContent=items.length;
   const total=items.reduce((a,b)=>a+(Number(b._duration_hours)||0),0);
-  document.getElementById('totalHours').textContent=total.toFixed(2);
-  const any=items.find(i=>(i['Hijri Date']||'').match(/\d{3,4}/));
-  const hij=any?((any['Hijri Date']||'').match(/(\d{3,4})/)[1]):'-';
-  document.getElementById('yearHijri').textContent=new Date().getFullYear()+' / '+hij;
+  document.getElementById("totalHours").textContent=total.toFixed(2);
+  const any=items.find(i=>(i["Hijri Date"]||"").match(/\d{3,4}/));
+  const hij=any?((any["Hijri Date"]||"").match(/(\d{3,4})/)[1]):"-";
+  document.getElementById("yearHijri").textContent=new Date().getFullYear()+" / "+hij;
 }
 
-let barChart, monthlyChart;
+let barChart,monthlyChart;
 function initCharts(){
-  barChart=new Chart(document.getElementById('barChart'),{
-    type:'bar',
-    data:{labels:[],datasets:[{label:'Hours',data:[],backgroundColor:'rgba(58,160,255,0.8)'}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}
+  barChart=new Chart(document.getElementById("barChart"),{
+    type:"bar",
+    data:{labels:[],datasets:[{label:"Hours",data:[],backgroundColor:"rgba(58,160,255,0.8)"}]},
+    options:{indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}
   });
-  monthlyChart=new Chart(document.getElementById('monthlyChart'),{
-    type:'line',
-    data:{labels:[],datasets:[{label:'Total Hours',data:[],fill:false,borderColor:'rgba(58,160,255,0.9)',tension:0.2}]},
+  monthlyChart=new Chart(document.getElementById("monthlyChart"),{
+    type:"line",
+    data:{labels:[],datasets:[{label:"Total Hours",data:[],fill:false,borderColor:"rgba(58,160,255,0.9)",tension:0.2}]},
     options:{plugins:{legend:{display:false}}}
   });
 }
@@ -152,19 +156,18 @@ function renderBar(typeMap){
   barChart.update();
 }
 
-function renderMonthlyChart(monthMap, selectedMonth=null){
+function renderMonthlyChart(monthMap){
   const labels=Object.keys(monthMap);
   monthlyChart.data.labels=labels;
   monthlyChart.data.datasets[0].data=labels.map(l=>monthMap[l]);
   monthlyChart.update();
 
-  const monthSel=document.getElementById('monthFilter');
-  monthSel.innerHTML='<option value="all">All Months</option>'+labels.map(m=>`<option value="${m}">${m}</option>`).join('');
+  const monthSel=document.getElementById("monthFilter");
+  monthSel.innerHTML='<option value="all">All Months</option>'+labels.map(m=>`<option value="${m}">${m}</option>`).join("");
   monthSel.onchange=()=>{
     const val=monthSel.value;
-    if(val==='all'){renderMonthlyChart(monthMap);}
-    else {
-      const data={ [val]: monthMap[val] };
+    if(val==="all"){renderMonthlyChart(monthMap);}
+    else{
       monthlyChart.data.labels=[val];
       monthlyChart.data.datasets[0].data=[monthMap[val]];
       monthlyChart.update();
@@ -173,14 +176,14 @@ function renderMonthlyChart(monthMap, selectedMonth=null){
 }
 
 function renderTable(items){
-  const tbody=document.querySelector('#dataTable tbody');
-  tbody.innerHTML='';
-  const rowsPer=Number(document.getElementById('rowsPerPage').value)||50;
-  const q=(document.getElementById('search').value||'').toLowerCase();
-  const filtered=items.filter(it=>(it['Description']||'').toLowerCase().includes(q)||(it['Type']||'').toLowerCase().includes(q));
+  const tbody=document.querySelector("#dataTable tbody");
+  tbody.innerHTML="";
+  const rowsPer=Number(document.getElementById("rowsPerPage").value)||50;
+  const q=(document.getElementById("search").value||"").toLowerCase();
+  const filtered=items.filter(it=>(it["Description"]||"").toLowerCase().includes(q)||(it["Type"]||"").toLowerCase().includes(q));
   filtered.slice(0,rowsPer).forEach(it=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${it['Description']||''}</td><td>${it['Type']||''}</td><td>${it['Hijri Date']||''}</td><td>${(Number(it._duration_hours)||0).toFixed(2)}</td>`;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${it["Description"]||""}</td><td>${it["Type"]||""}</td><td>${it["Hijri Date"]||""}</td><td>${it["Total Hours"]||""}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -192,8 +195,8 @@ function initDashboard(){
   renderTable(ITEMS);
 }
 
-document.getElementById('search').addEventListener('input',()=>renderTable(ITEMS));
-document.getElementById('rowsPerPage').addEventListener('change',()=>renderTable(ITEMS));
+document.getElementById("search").addEventListener("input",()=>renderTable(ITEMS));
+document.getElementById("rowsPerPage").addEventListener("change",()=>renderTable(ITEMS));
 
 initCharts();
 loadCSV();
